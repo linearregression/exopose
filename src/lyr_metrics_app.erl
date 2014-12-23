@@ -11,6 +11,8 @@
 -define(SET_ENV(K,V,E), application:set_env(K,V,E)).
 -define(GET_VAL(K,L), proplists:get_value(K,L)).
 -define(DELETE(K,L), proplists:delete(K, L)).
+-define(LOG(Level,Fmt), lager:Level(Fmt)).
+-define(LOG(Level, Fmt, Args), lager:Level(Fmt, Args)).
 
 %% ===================================================================
 %% API
@@ -43,6 +45,7 @@ start_custom_reporter() ->
     ok = application:load(exometer),
     case ?GET_VAL(report, ExometerConfig) of
         undefined ->
+            ?LOG(debug, "~p has found no exometer report parameters", [?MODULE]),
             ok = application:unload(exometer),
             {ok, missing_config};
         Report ->
@@ -68,6 +71,9 @@ start_custom_reporter() ->
                     ok = application:start(exometer),
                     {ok, started};
                 false ->
+                    ?LOG(debug, "~p cannot open collectd socket", [?MODULE]),
+                    ok = ?SET_ENV(exometer, predefined, ?GET_VAL(predefined, ExometerConfig)),
+                    ok = application:start(exometer),
                     {ok, cannot_open_socket}
             end
     end.
