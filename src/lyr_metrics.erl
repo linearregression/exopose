@@ -66,7 +66,7 @@ incr(Counter) ->
 
 vm() ->
     VMStats = exometer:get_values([erlang]),
-    [{Name, Value} || {Name, [{value, Value}, {ms_since_reset, _}]} <- VMStats].
+    [{pp(Name), Value} || {Name, [{value, Value}, {ms_since_reset, _}]} <- VMStats].
 
 i() ->
     gen_server:call(?SERVER, info).
@@ -181,6 +181,16 @@ metric_name(Name) ->
 metric_callback({_Name, Callback}) ->
     Callback.    
 
+pp(Name) ->
+    pp(Name, []).
+
+pp([], Acc) ->
+    erlang:list_to_binary(lists:reverse(Acc));
+pp([Atom], Acc) when is_atom(Atom) ->
+    pp([], [atom_to_list(Atom) | Acc]);
+pp([Atom | Rest], Acc) when is_atom(Atom) ->
+    pp(Rest, ["_", atom_to_list(Atom) | Acc]).
+
 metric_to_fun([erlang, processes]) ->
     {fun erlang:memory/1, [processes]};
 metric_to_fun([erlang, system]) ->
@@ -200,3 +210,15 @@ is_callback({Fun, Args}) ->
        true ->
             false
     end.
+
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+pp_test() ->
+    ?assertEqual(<<"">>, pp([])),
+    ?assertEqual(<<"random_name">>, pp([random_name])),
+    ?assertEqual(<<"first_second">>, pp([first, second])),
+    ?assertEqual(<<"a_b_c">>, pp([a,b,c])).
+
+-endif.
