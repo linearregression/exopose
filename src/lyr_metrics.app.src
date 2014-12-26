@@ -13,12 +13,12 @@
    [
     {exometer,
      [{predefined,
-       [{[erlang, processes], gauge, []},
-        {[erlang, system],    gauge, []},
-        {[erlang, atom],      gauge, []},
-        {[erlang, binary],    gauge, []},
-        {[erlang, ets],       gauge, []},
-        {[erlang, run_queue], gauge, []}
+       [{[vm, erlang, processes], gauge, []},
+        {[vm, erlang, system],    gauge, []},
+        {[vm, erlang, atom],      gauge, []},
+        {[vm, erlang, binary],    gauge, []},
+        {[vm, erlang, ets],       gauge, []},
+        {[vm, erlang, run_queue], gauge, []}
        ]},
       {report,
        [{reporters,
@@ -30,17 +30,17 @@
             {path, "/var/run/collectd.sock"},
             {plugin_name, "exometer"},
             {type_map,
-             [{[erlang, processes, value], "gauge"},
-              {[erlang, system, value], "gauge"},
-              {[erlang, atom, value], "gauge"},
-              {[erlang, binary, value], "gauge"},
-              {[erlang, ets, value], "gauge"},
-              {[erlang, run_queue, value], "gauge"}
+             [{[vm, erlang, processes, value], "gauge"},
+              {[vm, erlang, system, value], "gauge"},
+              {[vm, erlang, atom, value], "gauge"},
+              {[vm, erlang, binary, value], "gauge"},
+              {[vm, erlang, ets, value], "gauge"},
+              {[vm, erlang, run_queue, value], "gauge"}
              ]}
            ]}
          ]},
         {subscribers,
-         [{select, {[{ {[erlang, '_'], gauge, '_'}, [], ['$_']}], exometer_report_collectd, value, 1000}}]}
+         [{select, {[{ {[vm, erlang, '_'], gauge, '_'}, [], ['$_']}], exometer_report_collectd, value, 1000}}]}
        ]}
      ]}
    ]}

@@ -65,7 +65,7 @@ incr(Counter) ->
     gen_server:cast(?SERVER, {incr, Counter}).
 
 vm() ->
-    VMStats = exometer:get_values([erlang]),
+    VMStats = exometer:get_values([vm]),
     [{pp(Name), Value} || {Name, [{value, Value}, {ms_since_reset, _}]} <- VMStats].
 
 i() ->
@@ -117,8 +117,7 @@ handle_call({get, Types}, _From, State)
     Result = [ begin 
                    Name = metric_name(Metric),
                    {ok, Info} = exometer:get_value(Name),
-                   Value = proplists:get_value(value, Info, Info), 
-                   {Name, Value} 
+                   [{name, pp(Name)} | Info]
                end || Metric <- return(Types, State) ],
     {reply, Result, State};
 handle_call(info, _From, #state{counters = C,
@@ -191,17 +190,17 @@ pp([Atom], Acc) when is_atom(Atom) ->
 pp([Atom | Rest], Acc) when is_atom(Atom) ->
     pp(Rest, ["_", atom_to_list(Atom) | Acc]).
 
-metric_to_fun([erlang, processes]) ->
+metric_to_fun([vm, erlang, processes]) ->
     {fun erlang:memory/1, [processes]};
-metric_to_fun([erlang, system]) ->
+metric_to_fun([vm, erlang, system]) ->
     {fun erlang:memory/1, [system]};
-metric_to_fun([erlang, atom]) ->
+metric_to_fun([vm, erlang, atom]) ->
     {fun erlang:memory/1, [atom]};
-metric_to_fun([erlang, binary]) ->
+metric_to_fun([vm, erlang, binary]) ->
     {fun erlang:memory/1, [binary]};
-metric_to_fun([erlang, ets]) ->
+metric_to_fun([vm, erlang, ets]) ->
     {fun erlang:memory/1, [ets]};
-metric_to_fun([erlang, run_queue]) ->
+metric_to_fun([vm, erlang, run_queue]) ->
     {fun erlang:statistics/1, [run_queue]}.
 
 is_callback({Fun, Args}) ->
