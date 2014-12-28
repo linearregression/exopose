@@ -94,7 +94,7 @@ init([]) ->
 handle_call({new, counter, Name}, _From, #state{counters = Counters} = State) ->
     Result = exometer:new(Name, counter),
     ?LOG(info, "~p has installed a new counter: ~p", [?MODULE, Name]),
-    {reply, Result, State#state{counters = [Name | Counters]}};
+    {reply, Result, State#state{counters = [Name | Counters]}, ?TIMEOUT};
 handle_call({new, Type, Name, Callback}, _From, #state{gauges = G, histograms = H} = State) 
   when Type =:= gauge; Type =:= histogram ->
     case is_callback(Callback) of
@@ -108,9 +108,9 @@ handle_call({new, Type, Name, Callback}, _From, #state{gauges = G, histograms = 
                         State#state{histograms = [{Name, Callback} | H]}
                 end,
             ?LOG(info, "~p has installed a new ~p: ~p", [?MODULE, Type, Name]),
-            {reply, ok, NewState};
+            {reply, ok, NewState, ?TIMEOUT};
         false ->
-            {reply, {error, badarg}, State}
+            {reply, {error, badarg}, State, ?TIMEOUT}
     end;
 handle_call({get, Types}, _From, State) 
   when Types =:= gauges; Types =:= histograms; Types =:= counters ->
@@ -119,7 +119,7 @@ handle_call({get, Types}, _From, State)
                    {ok, Info} = exometer:get_value(Name),
                    [{name, pp(Name)} | Info]
                end || Metric <- return(Types, State) ],
-    {reply, Result, State};
+    {reply, Result, State, ?TIMEOUT};
 handle_call(info, _From, #state{counters = C,
                                 histograms = H,
                                 gauges = G} = State) ->
@@ -129,15 +129,13 @@ handle_call(info, _From, #state{counters = C,
          {histograms, H},
          {gauges, G}],
     %% Add a field with the timer ref if available.
-    {reply, Result, State}.
+    {reply, Result, State, ?TIMEOUT}.
     
 
 handle_cast({incr, Name}, State) ->
     exometer:update(Name, 1), %% add pattern match
-    {noreply, State}.
+    {noreply, State, ?TIMEOUT}.
 
-handle_info(timeout, #state{gauges = [], histograms = []} = State) ->
-    {noreply, State};
 handle_info(timeout, #state{gauges = G, histograms = H} = State) ->
     true = update_metrics(G ++ H),
     {noreply, State, ?TIMEOUT}.
