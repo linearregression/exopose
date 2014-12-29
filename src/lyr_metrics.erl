@@ -156,12 +156,10 @@ update_metrics(Metrics) ->
     lists:all(fun(ok) -> true; (_) -> false end, Results).
 
 sample(Metric) ->
-    sample(Metric, metric_callback(Metric)).
+    sample(metric_name(Metric), metric_callback(Metric)).
 
-sample(Metric, {Fun, Args}) ->
-    Result = erlang:apply(Fun, Args),
-    ?LOG(debug, "Sampled ~p with value: ~p", [Metric, Result]),
-    Result.
+sample(_Metric, {Fun, Args}) ->
+    erlang:apply(Fun, Args).
 
 return(counters, #state{counters = Counters}) ->
     Counters;
@@ -217,5 +215,11 @@ pp_test() ->
     ?assertEqual(<<"random_name">>, pp([random_name])),
     ?assertEqual(<<"first_second">>, pp([first, second])),
     ?assertEqual(<<"a_b_c">>, pp([a,b,c])).
+
+is_callback_test() ->
+    ?assertNot(is_callback({fun erlang:now/0, []})),
+    ?assertNot(is_callback({fun lists:seq/2, [1,5]})),
+    ?assert(is_callback({fun () -> 1 end, []})),
+    ?assert(is_callback({fun (N) -> N+1 end, [0]})).
 
 -endif.
