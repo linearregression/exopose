@@ -1,7 +1,7 @@
 {application, lyr_metrics,
  [
   {description, "Layer Erlang Metrics"},
-  {vsn, "1"},
+  {vsn, "0.1"},
   {registered, []},
   {applications, [
                   kernel,
@@ -42,6 +42,14 @@
         {subscribers,
          [{select, {[{ {[vm, erlang, '_'], gauge, '_'}, [], ['$_']}], exometer_report_collectd, value, 1000}}]}
        ]}
+     ]},
+    {callbacks,
+     [{[vm, erlang, processes], {{erlang, memory, 1}, [processes]}},
+      {[vm, erlang, system],    {{erlang, memory, 1}, [system]}},
+      {[vm, erlang, atom],      {{erlang, memory, 1}, [atom]}},
+      {[vm, erlang, binary],    {{erlang, memory, 1}, [binary]}},
+      {[vm, erlang, ets],       {{erlang, memory, 1}, [ets]}},
+      {[vm, erlang, run_queue], {{erlang, statistics, 1}, [run_queue]}}
      ]}
    ]}
  ]}.

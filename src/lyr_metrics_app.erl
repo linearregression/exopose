@@ -78,7 +78,7 @@ start_custom_reporter() ->
             end
     end.
 
-%% Tests whether there's a collectd unix socket read at the provided path.
+%% Tests whether there's a collectd unix socket ready at the provided path.
 is_collectd_socket_ready(Path, Timeout) ->
     case afunix:connect(Path, [{active, false}, {mode, binary}], Timeout) of
         {ok, _Socket} -> true;
