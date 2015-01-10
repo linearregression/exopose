@@ -1,6 +1,6 @@
-{application, lyr_metrics,
+{application, exopose,
  [
-  {description, "Layer Erlang Metrics"},
+  {description, "exometer services exposed easily"},
   {vsn, "0.1"},
   {registered, []},
   {applications, [
@@ -8,7 +8,7 @@
                   stdlib,
                   lager
                  ]},
-  {mod, { lyr_metrics_app, []}},
+  {mod, { exopose_app, []}},
   {env,
    [
     {exometer,

@@ -4,13 +4,13 @@
 %%% Server for easy metric management through `exometer`.
 %%% @end
 %%%-------------------------------------------------------------------
--module(lyr_metrics).
+-module(exopose).
 
 -behaviour(gen_server).
 
 -compile([{parse_transform, lager_transform}]).
 
--include("lyr_metrics.hrl").
+-include("exopose.hrl").
 
 %% API
 -export([start_link/0]).

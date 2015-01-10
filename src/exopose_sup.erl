@@ -1,4 +1,4 @@
--module(lyr_metrics_sup).
+-module(exopose_sup).
 
 -behaviour(supervisor).
 
@@ -23,5 +23,5 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, [?CHILD(lyr_metrics, worker)]} }.
+    {ok, { {one_for_one, 5, 10}, [?CHILD(exopose, worker)]} }.
 

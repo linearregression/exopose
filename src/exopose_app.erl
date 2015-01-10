@@ -1,4 +1,4 @@
--module(lyr_metrics_app).
+-module(exopose_app).
 
 -behaviour(application).
 
@@ -19,7 +19,7 @@
 %% ===================================================================
 
 start() ->
-    {ok, _} = application:ensure_all_started(lyr_metrics, transient).
+    {ok, _} = application:ensure_all_started(exopose, transient).
 
 %% ===================================================================
 %% Application callbacks
@@ -27,7 +27,7 @@ start() ->
 
 start(_StartType, _StartArgs) ->
     {ok, _} = start_custom_reporter(),
-    lyr_metrics_sup:start_link().
+    exopose_sup:start_link().
 
 stop(_State) ->
     ok.

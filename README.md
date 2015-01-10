@@ -1,11 +1,11 @@
-layer-erl-metrics
+exopose
 =================
 
-# Introduction
+## Introduction
 
-Layer Erlang Metrics, a.k.a `lyr_metrics`, is a simple application that leverages [`exometer`](https://github.com/Feuerlabs/exometer) to be integrated as an unique Erlang application in any of the Layer Erlang Systems (e.g: `tmc`, `shift`, `ctrl`).
+`exopose` is a simple application that leverages [`exometer`](https://github.com/Feuerlabs/exometer) in such a way that can be integrated as an unique Erlang application in any Erlang application.
 
-Given the described [Operational Metrics](https://github.com/layerhq/docs/blob/operational_metrics/infra/metrics/README.md) document,  `collectd` is the daemon that glues stats collection tools such Exometer, and Kafka broker. Therefore, `lyr_metrics` includes default environment configuration for `exometer` where `exometer_report_collectd` reporter is pre-configured. That config includes definitions of Erlang VM metrics,
+Given the described [Operational Metrics](https://github.com/layerhq/docs/blob/operational_metrics/infra/metrics/README.md) document,  `collectd` is the daemon that glues stats collection tools such Exometer, and Kafka broker. Therefore, `exopose` includes default configuration for `exometer` where `exometer_report_collectd` reporter is pre-configured. That config includes definitions of Erlang VM metrics,
 
 ```erlang
 {predefined,
@@ -18,35 +18,130 @@ Given the described [Operational Metrics](https://github.com/layerhq/docs/blob/o
 ]}
 ```
 
-# Features
+## Features
 
-- Compatible with exometer official environment variables.
-- Out-of-the-box Erlang VM metrics monitoring.
-- Data reporting to collectd daemon.
-- OS hostname based custom reporter (specially designed for Docker containers).
-- Fallback to silent app behavior should target host not have `collectd` configured.
+- Metric sampling mechanism to provide value updates to `exometer`.
+- Configuration compatibility with `exometer` environment variables.
+- Pre-configured Erlang VM metrics monitoring.
+- Pre-configured data reporting to `collectd` daemon (Fallback to silent app behavior should target host not have `collectd` unix socket configured)
 
-# Topology
+## Topology
 
-- `lyr_metrics_app` implements `application` behavior being in charged of starting a custom `collectd` reporter if the corresponding `collectd` unix socket is ready given the provided configuration in the `app.src` file unless it's overwritten by a general `.config` file.
-- `lyr_metrics_sup` supervises `lyr_metrics` `gen_server` that samples defined gauges every `TIMEOUT` and update their values, besides exposing an interface to create and manipulate counters.
+- `exopose_app` implements `application` behavior being in charged of starting a custom `collectd` reporter if the corresponding `collectd` unix socket is ready given the provided configuration in the `app.src` file unless it's overwritten by a general `.config` file.
+- `exopose_sup` supervises `exopose` `gen_server` that samples defined metrics every `TIMEOUT` and update their values.
 
-# Dependencies
+## Dependencies
 
-- Exometer, listed in `rebar.config`.
+- [`exometer`](https://github.com/Feuerlabs/exometer)
 
-# Integration
+## Installation
 
 As simple as the following two steps:
 
-1. Add `lyr_metrics` to your `rebar.config`.
-2. Include `lyr_metrics` to `applications` list in your `app.src`.
+1. Add `exopose` to your `rebar.config`.
+2. Include `exopose` to `applications` list in your `app.src` file.
 
-Note that if the integrator uses `layer-prebuild` script to fetch dependencies, you will want to lock all sub-dependencies down to your rebar.config, therefore you would need to include as well:
+Note that as side-effect of depending on `exometer` the following sub-dependencies will be fetched. If you're looking at dependency locking your code base, you might want to lock the following extra dependencies to a specific version:
 
-1. `afunix`
-2. `bear`
-3. `exometer`
-4. `folsom`
-6. `netlink`
-7. `setup`
+- `afunix`
+- `bear`
+- `folsom`
+- `netlink`
+- `setup`
+
+## Usage
+
+```erlang
+$ erl -pa ebin -pa deps/*/ebin -s exopose_app
+Erlang/OTP 17 [erts-6.2.1] [source] [64-bit] [smp:8:8] [async-threads:10] [hipe] [kernel-poll:false] [dtrace]
+
+Eshell V6.2.1  (abort with ^G)
+1> 15:14:08.470 [info] Application lager started on node nonode@nohost
+15:14:08.491 [info] Starting reporters with []
+15:14:08.491 [info] Application exometer started on node nonode@nohost
+15:14:08.496 [info] exopose has started monotoring 6 metrics
+15:14:08.496 [info] Application exopose started on node nonode@nohost
+```
+
+The call `exopose:i/0` returns general information about the current configuration and state of the application,
+
+1> exopose:i().
+[{total,6},
+ {exometer_reporters,[]},
+ {counters,[]},
+ {histograms,[]},
+ {gauges,[[vm,erlang,atom],
+          [vm,erlang,binary],
+          [vm,erlang,ets],
+          [vm,erlang,processes],
+          [vm,erlang,run_queue],
+          [vm,erlang,system]]},
+ {callbacks,[{[vm,erlang,processes],
+              {{erlang,memory,1},[processes]}},
+             {[vm,erlang,system],{{erlang,memory,1},[system]}},
+             {[vm,erlang,atom],{{erlang,memory,1},[atom]}},
+             {[vm,erlang,binary],{{erlang,memory,1},[binary]}},
+             {[vm,erlang,ets],{{erlang,memory,1},[ets]}},
+             {[vm,erlang,run_queue],
+             {{erlang,statistics,1},[run_queue]}}]}]
+```
+
+Default configured Erlang VM are returned by `exopose:vm/0`,
+
+```erlang
+2> exopose:vm().
+[{<<"vm_erlang_atom">>,339441},
+ {<<"vm_erlang_binary">>,19808},
+ {<<"vm_erlang_ets">>,469968},
+ {<<"vm_erlang_processes">>,6396928},
+ {<<"vm_erlang_run_queue">>,1},
+ {<<"vm_erlang_system">>,13251376}]
+```     
+
+## Managing metrics
+
+You can use `exopose` API to create `gauges`, `counters` and `histograms`. For further info, browse documentation inside `src/exopose.erl`. `exopose` delegates on `exometer` the responsability to keep track of existing metrics, not keeping a state for such purpose. 
+
+```erlang
+3> exopose:new_counter([test,counter]).
+ok
+15:14:54.304 [info] exopose has installed a new counter: [test,counter]
+4> exopose:incr([test,counter]).
+ok
+5> exopose:incr([test,counter]).
+ok
+6> exopose:get_counters().
+[[{name,<<"test_counter">>},
+  {value,2},
+  {ms_since_reset,15401}]]  
+```
+
+Note that both `gauges` and `histogram` behave similarly in such a way that both need to be provided with a function callback,
+
+```
+7> exopose:new_gauge([test,gauge], {fun() -> {_,_,MS} = erlang:now(), MS end, []}).
+ok
+15:34:28.414 [info] exopose has installed a new gauge: [test,gauge]
+8> exopose:get_gauges().
+[[{name,<<"test_gauge">>},
+  {value,688761},
+  {ms_since_reset,36866}],
+ [...]]
+```
+
+Callbacks can be provided in two ways, (see `include/exopose.hrl` for type definitions). First parameter can be either `mfa()` or `function()`, and second parameter is always expected as a list of atoms, which stands for the parameter list for the function provided. Callbacks are stored in memory, and therefore non-fault-tolerant. If they are provided as part of the initial configuration (`.config` or `app.src` files) they will always be available). If callback is not found, `exopose` will not provide `exometer` with any update.
+
+## Metric automatic sampling
+
+By default, `exopose` server samples metrics every 10 seconds, that can be configured with `exopose:set_timeout/1` (milisecond as time unit). Current timeout value is returned through `exopose:get_timeout/0`.
+
+```erlang
+15:24:18.963 [info] Sampling metrics...
+15:24:28.969 [info] Sampling metrics...
+15:24:38.971 [info] Sampling metrics...
+7> 15:30:39.106 [info] Sampling metrics...
+exopose:set_timeout(100000).
+ok
+```
+
+When this process happens, `gauges` and `histograms` are sampled, in other words, their current values get updated with what their callbacks return, and `exometer` updates their records.
