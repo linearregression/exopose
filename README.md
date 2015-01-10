@@ -5,7 +5,7 @@ exopose
 
 `exopose` is a simple application that leverages [`exometer`](https://github.com/Feuerlabs/exometer) in such a way that can be integrated as an unique Erlang application in any Erlang application.
 
-Given the described [Operational Metrics](https://github.com/layerhq/docs/blob/operational_metrics/infra/metrics/README.md) document,  `collectd` is the daemon that glues stats collection tools such Exometer, and Kafka broker. Therefore, `exopose` includes default configuration for `exometer` where `exometer_report_collectd` reporter is pre-configured. That config includes definitions of Erlang VM metrics,
+`exopose` includes default configuration for `exometer` where `exometer_report_collectd` reporter is pre-configured. That config includes the following definitions of Erlang VM metrics,
 
 ```erlang
 {predefined,
@@ -65,6 +65,7 @@ Eshell V6.2.1  (abort with ^G)
 
 The call `exopose:i/0` returns general information about the current configuration and state of the application,
 
+```erlang
 1> exopose:i().
 [{total,6},
  {exometer_reporters,[]},
@@ -118,7 +119,7 @@ ok
 
 Note that both `gauges` and `histogram` behave similarly in such a way that both need to be provided with a function callback,
 
-```
+```erlang
 7> exopose:new_gauge([test,gauge], {fun() -> {_,_,MS} = erlang:now(), MS end, []}).
 ok
 15:34:28.414 [info] exopose has installed a new gauge: [test,gauge]
