@@ -52,7 +52,7 @@ Note that as side-effect of depending on `exometer` the following sub-dependenci
 ## Usage
 
 ```erlang
-$ erl -pa ebin -pa deps/*/ebin -s exopose_app
+> erl -pa ebin -pa deps/*/ebin -s exopose_app
 Erlang/OTP 17 [erts-6.2.1] [source] [64-bit] [smp:8:8] [async-threads:10] [hipe] [kernel-poll:false] [dtrace]
 
 Eshell V6.2.1  (abort with ^G)
@@ -146,3 +146,5 @@ ok
 ```
 
 When this process happens, `gauges` and `histograms` are sampled, in other words, their current values get updated with what their callbacks return, and `exometer` updates their records.
+
+The value of the sampling timeout can be customized during deployment by overwriting `sample_timeout` variable in the `exopose` Application.

@@ -31,7 +31,7 @@
          terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE).
--define(TIMEOUT, 10000).
+-define(DEF_SAMPLE_TIMEOUT, 10000).
 -define(LOG(Level,Fmt), lager:Level(Fmt)).
 -define(LOG(Level,Fmt,Args), lager:Level(Fmt,Args)).
 
@@ -105,35 +105,37 @@ init([]) ->
             undefined -> [];
             {ok, List} -> List
         end,
-    {ok, #state{timeout = ?TIMEOUT, callbacks = Callbacks}, ?TIMEOUT}.
+    Timeout = application:get_env(exopose, sample_timeout, ?DEF_SAMPLE_TIMEOUT),
+    erlang:send(self(), sample_tick),
+    {ok, #state{timeout = Timeout, callbacks = Callbacks}}.
 
-handle_call({new, counter, Name}, _From, #state{timeout = T} = State) ->
+handle_call({new, counter, Name}, _From, State) ->
     Result = exometer:new(Name, counter),
     ?LOG(info, "~p has installed a new counter: ~p", [?MODULE, Name]),
-    {reply, Result, State, T};
+    {reply, Result, State};
 handle_call({new, Type, Name, Callback}, _From, State)
   when Type =:= gauge; Type =:= histogram ->
-    #state{callbacks = C, timeout = T} = State,
+    #state{callbacks = C} = State,
     case is_callback(Callback) of
         true ->
             ok = exometer:new(Name, Type),
             ?LOG(info, "~p has installed a new ~p: ~p", [?MODULE, Type, Name]),
-            {reply, ok, State#state{callbacks = [{Name, Callback} | C]} , T};
+            {reply, ok, State#state{callbacks = [{Name, Callback} | C]}};
         false ->
-            {reply, {error, badarg}, State, T}
+            {reply, {error, badarg}, State}
     end;
-handle_call({get_type, Type}, _From, #state{timeout = T} = State)
+handle_call({get_type, Type}, _From, State)
   when Type =:= gauge; Type =:= histogram; Type =:= counter ->
     Result = [ begin 
                    {ok, Info} = exometer:get_value(Metric),
                    [{name, pp(Metric)} | Info]
                end || Metric <- exometrics(Type) ],
-    {reply, Result, State, T};
+    {reply, Result, State};
 handle_call({get, timeout}, _From, #state{timeout = T} = State) ->
-    {reply, T, State, T};
+    {reply, T, State};
 handle_call({set, timeout, T}, _From, State) ->
-    {reply, ok, State#state{timeout = T}, T};
-handle_call(info, _From, #state{callbacks = C, timeout = T} = State) ->
+    {reply, ok, State#state{timeout = T}};
+handle_call(info, _From, #state{callbacks = C} = State) ->
     EM = exometrics(),
     Result = 
         [{total, length(EM)},
@@ -143,27 +145,27 @@ handle_call(info, _From, #state{callbacks = C, timeout = T} = State) ->
          {gauges, exometrics(gauge, EM)},
          {callbacks, C}],
     %% Add a field with the timer ref if available.
-    {reply, Result, State, T}.
+    {reply, Result, State}.
     
-handle_cast({incr, Name}, #state{timeout = T} = State) ->
+handle_cast({incr, Name}, State) ->
     exometer:update(Name, 1), %% add pattern match
-    {noreply, State, T}.
+    {noreply, State}.
 
-%% Everytime the server times out, metrics are sampled and
+%% Whenever `sample_tick` message is received, metrics are sampled and
 %% new values are updated through `exometer:update/2`.
 %% Given three main metrics: counters, histograms and gauges,
-%% only histograms and guages need to be sampled through their
-%% stored callbacks.
-handle_info(timeout, #state{callbacks = Callbacks, timeout = T} = State) ->
-    ?LOG(info, "Sampling metrics..."),
+%% only histograms and gauges need to be sampled through their stored callbacks.
+handle_info(sample_tick, #state{callbacks = Callbacks, timeout = T} = State) ->
     Metrics = exometrics(gauge) ++ exometrics(histogram),
+    ?LOG(debug, "~p is sampling ~p metrics, will occur again in ~p ms", [?MODULE, length(Metrics), T]),
     [ok = begin
               case sample(Metric, Callbacks) of
                   skip -> ok;
                   Data -> exometer:update(Metric, Data)
               end
           end || Metric <- Metrics],
-    {noreply, State, T}.
+    erlang:send_after(T, self(), sample_tick),
+    {noreply, State}.
 
 terminate(_Reason, _State) ->
     ok.
@@ -179,7 +181,7 @@ code_change(_OldVsn, State, _Extra) ->
 sample(Metric, Callbacks) ->
     case proplists:get_value(Metric, Callbacks) of
         undefined ->
-            ?LOG(info, "Callback for metric ~p has not been found", [Metric]),
+            ?LOG(warning, "Callback for metric ~p has not been found", [Metric]),
             skip;
         Callback ->
             apply_callback(Callback)
