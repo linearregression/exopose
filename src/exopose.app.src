@@ -50,6 +50,7 @@
       {[vm, erlang, binary],    {{erlang, memory, 1}, [binary]}},
       {[vm, erlang, ets],       {{erlang, memory, 1}, [ets]}},
       {[vm, erlang, run_queue], {{erlang, statistics, 1}, [run_queue]}}
-     ]}
+     ]},
+    {sample_timeout, 10000}
    ]}
  ]}.
