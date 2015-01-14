@@ -60,5 +60,13 @@ exopose_server_test_() ->
                ?assertEqual(ok, exopose:incr([test,eunit,non_existing_counter])),
                timer:sleep(200),
                ?assertEqual(CurrentCounters + 1, length(exopose:get_counters()))
+       end},
+      {"Counter names can be parameterized",
+       fun () ->
+               CurrentCounters = length(exopose:get_counters()),
+               ?assertEqual(ok, exopose:new_counter([test,result,200])),
+               ?assertEqual(ok, exopose:new_counter([test,result,404])),
+               ?assertEqual(ok, exopose:new_counter([test,result,"401"])),
+               ?assertEqual(CurrentCounters + 3, length(exopose:get_counters()))
        end}
      ]}.

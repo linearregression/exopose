@@ -42,7 +42,7 @@ stop(_State) ->
 %% The reporter of choice is collectd exometer built-in backend.
 start_custom_reporter() ->
     {ok, ExometerConfig} = application:get_env(exometer),
-    ok = application:load(exometer),
+    application:load(exometer),
     case ?GET_VAL(report, ExometerConfig) of
         undefined ->
             ?LOG(debug, "~p has found no exometer report parameters", [?MODULE]),
