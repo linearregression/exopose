@@ -57,7 +57,8 @@ exopose_server_test_() ->
       {"Attempt to increment non-existing counter, creates it",
        fun () ->
                CurrentCounters = length(exopose:get_counters()),
-               ?assertEqual(ok, exopose:incr([test,eunit,counter])),
+               ?assertEqual(ok, exopose:incr([test,eunit,non_existing_counter])),
+               timer:sleep(200),
                ?assertEqual(CurrentCounters + 1, length(exopose:get_counters()))
        end}
      ]}.
