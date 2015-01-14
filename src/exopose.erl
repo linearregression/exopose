@@ -77,7 +77,8 @@ get_timeout() ->
 set_timeout(T) ->
     gen_server:call(?SERVER, {set, timeout, T}).
 
-%% @doc Increments the value of a given counter
+%% @doc Increments the value of a given counter. If the
+%% counter is not created, it gets created and updated.
 -spec incr(list(atom())) -> ok | {error, not_found}.
 incr(Counter) ->
     gen_server:cast(?SERVER, {incr, Counter}).
@@ -135,7 +136,7 @@ handle_call({get, timeout}, _From, #state{timeout = T} = State) ->
     {reply, T, State};
 handle_call({set, timeout, T}, _From, State) ->
     {reply, ok, State#state{timeout = T}};
-handle_call(info, _From, #state{callbacks = C} = State) ->
+handle_call(info, _From, #state{callbacks = C, timeout = T} = State) ->
     EM = exometrics(),
     Result = 
         [{total, length(EM)},
@@ -143,12 +144,13 @@ handle_call(info, _From, #state{callbacks = C} = State) ->
          {counters, exometrics(counter, EM)},
          {histograms, exometrics(histogram, EM)},
          {gauges, exometrics(gauge, EM)},
+         {sample_timeout, T},
          {callbacks, C}],
     %% Add a field with the timer ref if available.
     {reply, Result, State}.
     
 handle_cast({incr, Name}, State) ->
-    exometer:update(Name, 1), %% add pattern match
+    exometer:update_or_create(Name, 1, counter, []),
     {noreply, State}.
 
 %% Whenever `sample_tick` message is received, metrics are sampled and
