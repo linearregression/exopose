@@ -9,7 +9,7 @@
 %%%===================================================================
 
 %% @doc Pretty printing of exometer's metric names
--spec pp(name()) -> binary().
+-spec pp(name()) -> string().
 pp(Name) when is_list(Name) ->
     pp(Name, []).
 
@@ -18,7 +18,7 @@ pp(Name) when is_list(Name) ->
 %%%===================================================================
 
 pp([], Acc) ->
-    erlang:list_to_binary(lists:reverse(Acc));
+    lists:flatten(lists:reverse(Acc));
 
 pp([Atom], Acc) when is_atom(Atom) ->
     pp([], [atom_to_list(Atom) | Acc]);
@@ -42,10 +42,10 @@ pp([String | Rest], Acc) when is_list(String) ->
 -include_lib("eunit/include/eunit.hrl").
 
 pp_test() ->
-    ?assertEqual(<<"">>, pp([])),
-    ?assertEqual(<<"random_name">>, pp([random_name])),
-    ?assertEqual(<<"first_second">>, pp([first, second])),
-    ?assertEqual(<<"a_b_c">>, pp([a,b,c])),
-    ?assertEqual(<<"test_function_returns_200">>, pp([test,function,returns,200])).
+    ?assertEqual("", pp([])),
+    ?assertEqual("random_name", pp([random_name])),
+    ?assertEqual("first_second", pp([first, second])),
+    ?assertEqual("a_b_c", pp([a,b,c])),
+    ?assertEqual("test_function_returns_200", pp([test,function,returns,200])).
 
 -endif.
