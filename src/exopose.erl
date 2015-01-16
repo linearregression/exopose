@@ -14,15 +14,19 @@
 
 %% API
 -export([start_link/0]).
+
 -export([new_counter/1]).
 -export([new_gauge/2]).
 -export([new_histogram/2]).
 -export([incr/1]).
+
 -export([get_gauges/0]).
 -export([get_counters/0]).
 -export([get_histograms/0]).
+
 -export([get_timeout/0]).
 -export([set_timeout/1]).
+
 -export([vm/0]).
 -export([i/0]).
 
@@ -57,7 +61,6 @@ new_gauge(Name, Callback) ->
 new_histogram(Name, Callback) ->
     gen_server:call(?SERVER, {new, histogram, Name, Callback}).
 
--spec get_gauges() -> list(gauge()).
 get_gauges() ->
     gen_server:call(?SERVER, {get_type, gauge}).
 
@@ -87,7 +90,7 @@ incr(Counter) ->
 -spec vm() -> list(tuple(binary(), integer())).
 vm() ->
     VMStats = exometer:get_values([vm]),
-    [{pp(Name), Value} || {Name, [{value, Value}, {ms_since_reset, _}]} <- VMStats].
+    [{Name, Value} || {Name, [{value, Value}, {ms_since_reset, _}]} <- VMStats].
 
 %% @doc Returns various information about current metrics state.
 -spec i() -> list(tuple(atom(), term())).
@@ -129,7 +132,7 @@ handle_call({get_type, Type}, _From, State)
   when Type =:= gauge; Type =:= histogram; Type =:= counter ->
     Result = [ begin 
                    {ok, Info} = exometer:get_value(Metric),
-                   [{name, pp(Metric)} | Info]
+                   [{name, Metric} | Info]
                end || Metric <- exometrics(Type) ],
     {reply, Result, State};
 handle_call({get, timeout}, _From, #state{timeout = T} = State) ->
@@ -208,28 +211,6 @@ exometrics(Type) ->
 exometrics(Type, Metrics) ->
     lists:filtermap(fun({Name, T}) when T =:= Type -> {true, Name}; ({_,_}) -> false end, Metrics).
 
-%% Pretty printing of exometer's metric names
--spec pp(name()) -> binary().
-pp(Name) ->
-    pp(Name, []).
-
-pp([], Acc) ->
-    erlang:list_to_binary(lists:reverse(Acc));
-
-pp([Atom], Acc) when is_atom(Atom) ->
-    pp([], [atom_to_list(Atom) | Acc]);
-pp([Int], Acc) when is_integer(Int) ->
-    pp([], [integer_to_list(Int) | Acc]);
-pp([String], Acc) when is_list(String) ->
-    pp([], [String | Acc]);
-
-pp([Atom | Rest], Acc) when is_atom(Atom) ->
-    pp(Rest, ["_", atom_to_list(Atom) | Acc]);
-pp([Int | Rest], Acc) when is_integer(Int) ->
-    pp(Rest, ["_", integer_to_list(Int) | Acc]);
-pp([String | Rest], Acc) when is_list(String) ->
-    pp(Rest, ["_", String | Acc]).
-
 -spec is_callback(callback()) -> boolean().
 is_callback({Fun, Args}) when is_function(Fun) ->
     if is_list(Args) ->
@@ -244,16 +225,12 @@ is_callback({{M,F,_A}, Args}) ->
             false
     end.
 
+%%%===================================================================
+%%% EUnit
+%%%===================================================================
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
-
-pp_test() ->
-    ?assertEqual(<<"">>, pp([])),
-    ?assertEqual(<<"random_name">>, pp([random_name])),
-    ?assertEqual(<<"first_second">>, pp([first, second])),
-    ?assertEqual(<<"a_b_c">>, pp([a,b,c])),
-    ?assertEqual(<<"test_function_returns_200">>, pp([test,function,returns,200])).
 
 is_callback_test() ->
     ?assertNot(is_callback({fun erlang:now/0, []})),

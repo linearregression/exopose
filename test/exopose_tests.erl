@@ -2,6 +2,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-include("exopose.hrl").
+
 exopose_server_test_() ->
     {setup,
      fun() ->
@@ -21,7 +23,7 @@ exopose_server_test_() ->
        fun() ->
                VMMetrics = exopose:vm(),
                %% Excluding `erlang:statistics(run_queue)` since that can be 0.
-               [ ?assert(Val > 0) || {Name, Val} <- VMMetrics, Name =/= <<"vm_erlang_run_queue">> ]
+               [ ?assert(Val > 0) || {Name, Val} <- VMMetrics, Name =/= [vm,erlang,run_queue] ]
        end},
       {"Server state contains callbacks for all Erlang VM metrics",
        fun() ->
@@ -32,41 +34,59 @@ exopose_server_test_() ->
        end},
       {"New gauge gets added, and its value gets reported",
        fun() ->
-               CurrentGauges = length(exopose:get_gauges()),
                Name = [test,gauge],
                Fun = fun() -> element(3, erlang:now()) end,
                ?assertEqual(ok, exopose:new_gauge(Name, {Fun, []})),
                timer:sleep(200),
-               ?assertEqual(CurrentGauges + 1, length(exopose:get_gauges()))
+               Gauges = exopose:get_gauges(),
+               ?assert(existing_metric(Name, Gauges))
        end},
       {"New histogram gets added, and its value gets reported",
        fun () ->
-               CurrentHistograms = length(exopose:get_histograms()),
+               Name = [test,histogram],
                Fun = fun() -> element(3, erlang:now()) end,
-               ?assertEqual(ok, exopose:new_histogram([test,histogram], {Fun, []})),
+               ?assertEqual(ok, exopose:new_histogram(Name, {Fun, []})),
                timer:sleep(200),
-               ?assertEqual(CurrentHistograms + 1, length(exopose:get_histograms()))
+               Histograms = exopose:get_histograms(),
+               ?assert(existing_metric(Name, Histograms))
        end},
       {"New counter gets added, and its value gets reported",
        fun () ->
-               CurrentCounters = length(exopose:get_counters()),
-               ?assertEqual(ok, exopose:new_counter([test,counter])),
+               Name = [test,counter],
+               ?assertEqual(ok, exopose:new_counter(Name)),
                timer:sleep(200),
-               ?assertEqual(CurrentCounters + 1, length(exopose:get_counters()))
+               Counters = exopose:get_counters(),
+               ?assert(existing_metric(Name, Counters))
        end},
       {"Attempt to increment non-existing counter, creates it",
        fun () ->
-               CurrentCounters = length(exopose:get_counters()),
-               ?assertEqual(ok, exopose:incr([test,eunit,non_existing_counter])),
+               Name = [test,eunit,non_existing_counter],
+               Counters0 = exopose:get_counters(),
+               ?assertNot(existing_metric(Name, Counters0)),
+               ?assertEqual(ok, exopose:incr(Name)),
                timer:sleep(200),
-               ?assertEqual(CurrentCounters + 1, length(exopose:get_counters()))
+               Counters1 = exopose:get_counters(),
+               ?assert(existing_metric(Name, Counters1))
        end},
       {"Counter names can be parameterized",
        fun () ->
-               CurrentCounters = length(exopose:get_counters()),
-               ?assertEqual(ok, exopose:new_counter([test,result,200])),
-               ?assertEqual(ok, exopose:new_counter([test,result,404])),
-               ?assertEqual(ok, exopose:new_counter([test,result,"401"])),
-               ?assertEqual(CurrentCounters + 3, length(exopose:get_counters()))
+               C1 = [test,result,200],
+               C2 = [test,result,404],
+               C3 = [test,result,"not_found"],
+               ?assertEqual(ok, exopose:new_counter(C1)),
+               ?assertEqual(ok, exopose:new_counter(C2)),
+               ?assertEqual(ok, exopose:new_counter(C3)),
+               timer:sleep(200),
+               Counters = exopose:get_counters(),
+               [ ?assert(existing_metric(C, Counters)) || C <- [C1,C2,C3] ]
        end}
      ]}.
+
+
+%%%===================================================================
+%%% Helpers
+%%%===================================================================
+
+-spec existing_metric(name(), list(any())) -> boolean().
+existing_metric(MetricName, ListMetrics) ->
+    lists:member(MetricName, [ proplists:get_value(name, M) || M <- ListMetrics ] ).

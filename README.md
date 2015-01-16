@@ -91,12 +91,12 @@ Default configured Erlang VM are returned by `exopose:vm/0`,
 
 ```erlang
 2> exopose:vm().
-[{<<"vm_erlang_atom">>,339441},
- {<<"vm_erlang_binary">>,19808},
- {<<"vm_erlang_ets">>,469968},
- {<<"vm_erlang_processes">>,6396928},
- {<<"vm_erlang_run_queue">>,1},
- {<<"vm_erlang_system">>,13251376}]
+[{[vm,erlang,atom],339441},
+ {[vm,erlang,binary],36016},
+ {[vm,erlang,ets],462816},
+ {[vm,erlang,processes],5068480},
+ {[vm,erlang,run_queue],0},
+ {[vm,erlang,system],13260024}]
 ```     
 
 ## Managing metrics
@@ -112,7 +112,7 @@ ok
 5> exopose:incr([test,counter]).
 ok
 6> exopose:get_counters().
-[[{name,<<"test_counter">>},
+[[{name,[test,counter]},
   {value,2},
   {ms_since_reset,15401}]]  
 ```
@@ -124,7 +124,7 @@ Note that both `gauges` and `histogram` behave similarly in such a way that both
 ok
 15:34:28.414 [info] exopose has installed a new gauge: [test,gauge]
 8> exopose:get_gauges().
-[[{name,<<"test_gauge">>},
+[[{name,[test,gauge]},
   {value,688761},
   {ms_since_reset,36866}],
  [...]]
