@@ -186,7 +186,7 @@ code_change(_OldVsn, State, _Extra) ->
 sample(Metric, Callbacks) ->
     case proplists:get_value(Metric, Callbacks) of
         undefined ->
-            ?LOG(warning, "Callback for metric ~p has not been found", [Metric]),
+            ?LOG(debug, "Callback for metric ~p has not been found", [Metric]),
             skip;
         Callback ->
             apply_callback(Callback)
