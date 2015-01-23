@@ -46,8 +46,9 @@ start_custom_reporter() ->
     case ?GET_VAL(report, ExometerConfig) of
         undefined ->
             ?LOG(debug, "~p has found no exometer report parameters", [?MODULE]),
-            ok = application:unload(exometer),
-            {ok, missing_config};
+            ok = ?SET_ENV(exometer, predefined, ?GET_VAL(predefined, ExometerConfig)),
+            ok = application:start(exometer),
+            {ok, started};
         Report ->
             Subscribers    = ?GET_VAL(subscribers, Report),
             Reporters      = ?GET_VAL(reporters, Report),
