@@ -195,8 +195,7 @@ sample(Metric, Callbacks) ->
 -spec apply_callback(callback()) -> integer() | skip.
 apply_callback({Fun, Args}) when is_function(Fun) ->
     case catch erlang:apply(Fun, Args) of
-        {'EXIT', {undef, _}} ->
-            ?LOG(debug, "Callback with function ~p is undefined", [Fun]),
+        {'EXIT', {_, _}} ->
             skip;
         Val ->
             Val
@@ -207,7 +206,12 @@ apply_callback({{Mod, Fun, _Arity}, Args}) ->
             ?LOG(debug, "Callback module ~p is not loaded", [Mod]),
             skip;
         _ ->
-            erlang:apply(Mod, Fun, Args)
+            case catch erlang:apply(Mod, Fun, Args) of
+                {'EXIT', {_, _}} ->
+                    skip;
+                Val ->
+                    Val
+            end
     end.
 
 -spec exometrics() -> list(tuple(name(), atom())).
