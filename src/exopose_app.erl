@@ -8,25 +8,25 @@
 %% Application callbacks
 -export([start/2, stop/1]).
 
--define(SET_ENV(K,V,E), application:set_env(K,V,E)).
+-define(GET_ENV(K),     application:get_env(K)).
+-define(GET_ENV(A,K),   application:get_env(A,K)).
+-define(SET_ENV(A,K,V), application:set_env(A,K,V)).
+
 -define(GET_VAL(K,L), proplists:get_value(K,L)).
--define(DELETE(K,L), proplists:delete(K, L)).
--define(LOG(Level,Fmt), lager:Level(Fmt)).
--define(LOG(Level, Fmt, Args), lager:Level(Fmt, Args)).
 
 %% ===================================================================
 %% API
 %% ===================================================================
 
 start() ->
-    {ok, _} = application:ensure_all_started(exopose, transient).
+    {ok, _} = application:ensure_all_started(exopose).
 
 %% ===================================================================
 %% Application callbacks
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    {ok, _} = start_custom_reporter(),
+    {ok, _} = start_exometer_core(),
     exopose_sup:start_link().
 
 stop(_State) ->
@@ -36,52 +36,20 @@ stop(_State) ->
 %% Internal functions
 %% ===================================================================
 
-%% exometer needs to be start with custom environment
-%% variables that depend on the host it runs at, for which
-%% we modify the given config to start exometer with.
-%% The reporter of choice is collectd exometer built-in backend.
-start_custom_reporter() ->
-    {ok, ExometerConfig} = application:get_env(exometer),
-    application:load(exometer),
-    case ?GET_VAL(report, ExometerConfig) of
+%% `exometer_core` may be configured with statically defined entries,
+%% which are defined under variable `predefined`.
+%% `exopose` is provided with a default set of entries to monitor
+%% the Erlang VM (see `exopose.app.src`). Those are passed to
+%% `exometer_core` environment in the function below unless they have
+%% been overwriten by an external config file.
+start_exometer_core() ->
+    {ok, ExometerConfig} = ?GET_ENV(exometer_core),
+    application:load(exometer_core),
+    case ?GET_ENV(exometer_core, predefined) of
         undefined ->
-            ?LOG(debug, "~p has found no exometer report parameters", [?MODULE]),
-            ok = ?SET_ENV(exometer, predefined, ?GET_VAL(predefined, ExometerConfig)),
-            ok = application:start(exometer),
-            {ok, started};
-        Report ->
-            Subscribers    = ?GET_VAL(subscribers, Report),
-            Reporters      = ?GET_VAL(reporters, Report),
-            ReportCollectd = ?GET_VAL(exometer_report_collectd, Reporters),
-            Path           = ?GET_VAL(path, ReportCollectd),
-            ConnectTimeout = ?GET_VAL(connect_timeout, ReportCollectd),
-            case is_collectd_socket_ready(Path, ConnectTimeout) of
-                true ->
-                    NewHostname =
-                        case os:getenv("PARENT_HOSTNAME") of
-                            false ->
-                                atom_to_list(node());
-                            Env ->
-                                Env
-                        end,
-                    NewReportCollectd = [{hostname, NewHostname} | ?DELETE(hostname, ReportCollectd)],
-                    NewReporters = [{exometer_report_collectd, NewReportCollectd}],
-                    NewReport = [{reporters, NewReporters}, {subscribers, Subscribers}],
-                    ok = ?SET_ENV(exometer, report, NewReport),
-                    ok = ?SET_ENV(exometer, predefined, ?GET_VAL(predefined, ExometerConfig)),
-                    ok = application:start(exometer),
-                    {ok, started};
-                false ->
-                    ?LOG(debug, "~p cannot open collectd socket", [?MODULE]),
-                    ok = ?SET_ENV(exometer, predefined, ?GET_VAL(predefined, ExometerConfig)),
-                    ok = application:start(exometer),
-                    {ok, cannot_open_socket}
-            end
-    end.
-
-%% Tests whether there's a collectd unix socket ready at the provided path.
-is_collectd_socket_ready(Path, Timeout) ->
-    case afunix:connect(Path, [{active, false}, {mode, binary}], Timeout) of
-        {ok, _Socket} -> true;
-        {error, _Reason} -> false
-    end.
+            ok = ?SET_ENV(exometer_core, predefined, ?GET_VAL(predefined, ExometerConfig));
+        {ok, _Val} ->
+            ok
+    end,
+    ok = application:start(exometer_core),
+    {ok, started}.

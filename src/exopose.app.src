@@ -1,7 +1,7 @@
 {application, exopose,
  [
   {description, "exometer services exposed easily"},
-  {vsn, "0.1"},
+  {vsn, "0.1.0"},
   {registered, []},
   {applications, [
                   kernel,
@@ -10,47 +10,48 @@
                  ]},
   {mod, { exopose_app, []}},
   {env,
-   [
-    {exometer,
+   [{exometer_core,
      [{predefined,
-       [{[vm, erlang, processes], gauge, []},
-        {[vm, erlang, system],    gauge, []},
-        {[vm, erlang, atom],      gauge, []},
-        {[vm, erlang, binary],    gauge, []},
-        {[vm, erlang, ets],       gauge, []},
-        {[vm, erlang, run_queue], gauge, []}
-       ]},
-      {report,
-       [{reporters,
-         [{exometer_report_collectd,
-           [{reconnect_interval, 30},
-            {refresh_interval, 10},
-            {read_timeout, 5000},
-            {connect_timeout, 5000},
-            {path, "/var/run/collectd.sock"},
-            {plugin_name, "exometer"},
-            {type_map,
-             [{[vm, erlang, processes, value], "gauge"},
-              {[vm, erlang, system, value], "gauge"},
-              {[vm, erlang, atom, value], "gauge"},
-              {[vm, erlang, binary, value], "gauge"},
-              {[vm, erlang, ets, value], "gauge"},
-              {[vm, erlang, run_queue, value], "gauge"}
-             ]}
-           ]}
-         ]},
-        {subscribers,
-         [{select, {[{ {[vm, erlang, '_'], gauge, '_'}, [], ['$_']}], exometer_report_collectd, value, 1000}}]}
+       %% Memory stats.
+       [{[vm, erlang, total],          gauge, []},
+        {[vm, erlang, processes],      gauge, []},
+        {[vm, erlang, processes_used], gauge, []},
+        {[vm, erlang, system],         gauge, []},
+        {[vm, erlang, atom],           gauge, []},
+        {[vm, erlang, atom_used],      gauge, []},
+        {[vm, erlang, binary],         gauge, []},
+        {[vm, erlang, ets],            gauge, []},
+
+        %% System processes and ports stats.
+        {[sys, erlang, process_count], gauge, []},
+        {[sys, erlang, port_count],    gauge, []},
+        {[sys, erlang, run_queue],     gauge, []}
        ]}
      ]},
+
     {callbacks,
-     [{[vm, erlang, processes], {{erlang, memory, 1}, [processes]}},
-      {[vm, erlang, system],    {{erlang, memory, 1}, [system]}},
-      {[vm, erlang, atom],      {{erlang, memory, 1}, [atom]}},
-      {[vm, erlang, binary],    {{erlang, memory, 1}, [binary]}},
-      {[vm, erlang, ets],       {{erlang, memory, 1}, [ets]}},
-      {[vm, erlang, run_queue], {{erlang, statistics, 1}, [run_queue]}}
+     %% Information about memory dynamically allocated by the Erlang emulator.
+     %% Every callback returns memory size in bytes.
+     [{[vm, erlang, total],          {{erlang, memory, 1}, [total]}},
+      {[vm, erlang, processes],      {{erlang, memory, 1}, [processes]}},
+      {[vm, erlang, processes_used], {{erlang, memory, 1}, [processes_used]}},
+      {[vm, erlang, system],         {{erlang, memory, 1}, [system]}},
+      {[vm, erlang, atom],           {{erlang, memory, 1}, [atom]}},
+      {[vm, erlang, atom_used],      {{erlang, memory, 1}, [atom_used]}},
+      {[vm, erlang, binary],         {{erlang, memory, 1}, [binary]}},
+      {[vm, erlang, ets],            {{erlang, memory, 1}, [ets]}},
+
+      %% Number of processes currently existing at the local node as an integer.
+      {[sys, erlang, process_count], {{erlang, system_info, 1}, [process_count]}},
+
+      %% Number of ports currently existing at the local node as an integer.
+      {[sys, erlang, port_count], {{erlang, system_info, 1}, [port_count]}},
+
+      %% Number of processes that are ready to run on all available run queues.
+      {[sys, erlang, run_queue],     {{erlang, statistics, 1}, [run_queue]}}
      ]},
-    {sample_timeout, 1000}
+
+    {sample_timeout, 5000}
+
    ]}
  ]}.

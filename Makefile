@@ -9,5 +9,5 @@ compile: deps
 clean:
 	./rebar clean
 
-test:
+tests:
 	./rebar eunit skip_deps=true

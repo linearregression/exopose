@@ -23,7 +23,7 @@ exopose_server_test_() ->
        fun() ->
                VMMetrics = exopose:vm(),
                %% Excluding `erlang:statistics(run_queue)` since that can be 0.
-               [ ?assert(Val > 0) || {Name, Val} <- VMMetrics, Name =/= [vm,erlang,run_queue] ]
+               [ ?assert(Val > 0) || {Name, Val} <- VMMetrics, Name =/= [sys,erlang,run_queue] ]
        end},
       {"Server state contains callbacks for all Erlang VM metrics",
        fun() ->

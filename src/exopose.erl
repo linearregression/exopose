@@ -1,9 +1,3 @@
-%%%-------------------------------------------------------------------
-%%% @copyright (C) 2014, Layer Inc.
-%%% @doc
-%%% Server for easy metric management through `exometer`.
-%%% @end
-%%%-------------------------------------------------------------------
 -module(exopose).
 
 -behaviour(gen_server).
@@ -90,7 +84,8 @@ incr(Counter) ->
 -spec vm() -> list(tuple(binary(), integer())).
 vm() ->
     VMStats = exometer:get_values([vm]),
-    [{Name, Value} || {Name, [{value, Value}, {ms_since_reset, _}]} <- VMStats].
+    SysStats = exometer:get_values([sys]),
+    [{Name, Value} || {Name, [{value, Value}, {ms_since_reset, _}]} <- VMStats ++ SysStats].
 
 %% @doc Returns various information about current metrics state.
 -spec i() -> list(tuple(atom(), term())).
@@ -156,8 +151,8 @@ handle_cast({incr, Name}, State) ->
     exometer:update_or_create(Name, 1, counter, []),
     {noreply, State}.
 
-%% Whenever `sample_tick` message is received, metrics are sampled and
-%% new values are updated through `exometer:update/2`.
+%% Any time `sample_tick` message is received, metrics are sampled
+%% and new values are updated through `exometer:update/2`.
 %% Given three main metrics: counters, histograms and gauges,
 %% only histograms and gauges need to be sampled through their stored callbacks.
 handle_info(sample_tick, #state{callbacks = Callbacks, timeout = T} = State) ->
